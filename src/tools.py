@@ -50,34 +50,32 @@ sys_logger.info("Loading Cross-Encoder model...")
 reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
 def advanced_rag_search(query: str) -> str:
-    
-    # Executes a two-stage retrieve-and-rerank pipeline.
-    # Use this tool whenever you need to search the knowledge base for facts or documents.
-
+    """
+    Executes a Two-Stage Retrieval pipeline: LanceDB Hybrid Search -> Cross-Encoder Reranking.
+    Use this tool whenever you need to search the knowledge base for facts or documents.
+    """
     sys_logger.info(f"Tool Call: advanced_rag_search -> '{query}'")
     
     try:
-        # STAGE 1: High Recall Retrieval (Bi-Encoder via DuckDB)
-        # Fetch a wide net of 15 documents 
+        # STAGE 1: High Recall Hybrid Search (LanceDB pulls top 15)
+        # Because knowledge_base is configured with SearchType.hybrid, this does both vector & keyword search automatically.
         raw_results = knowledge_base.search(query, num_documents=15)
         
         if not raw_results:
             return "No relevant documents found in the knowledge base."
 
-        # STAGE 2: High Precision Reranking (Cross-Encoder)
-        # Pair the user query with every retrieved chunk for deep semantic scoring
+        # STAGE 2: High Precision Reranking (Cross-Encoder scores the top 15)
         pairs = [[query, doc.content] for doc in raw_results]
         scores = reranker.predict(pairs)
         
-        # Sort the results by the cross-encoder score in descending order
-        # We use numpy argsort to get the indices of the highest scores
+        # Sort the results by the highest cross-encoder score
         ranked_indices = np.argsort(scores)[::-1]
         
-        # Extract the top 3 most semantically relevant chunks
+        # Extract the top 3 absolute best chunks
         top_3_docs = [raw_results[i] for i in ranked_indices[:3]]
         top_3_scores = [scores[i] for i in ranked_indices[:3]]
         
-        # Format the output explicitly so the LLM must cite its sources
+        # Format the output so the LLM is forced to cite its exact sources
         formatted_context = "RETRIEVED KNOWLEDGE BASE CONTEXT:\n\n"
         for idx, (doc, score) in enumerate(zip(top_3_docs, top_3_scores)):
             formatted_context += f"--- Source Chunk {idx + 1} (Relevance Score: {score:.2f}) ---\n"
