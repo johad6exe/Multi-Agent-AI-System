@@ -21,7 +21,6 @@ general_agent = Agent(
     model=llm_model,
     role="You are a brilliant analytical assistant. You handle general inquiries, logic, and mathematics.",
     tools=[evaluate_math_expression, real_web_search],
-    show_tool_calls=True, 
     markdown=True
 )
 
@@ -38,7 +37,6 @@ retriever_agent = Agent(
         "When you reply, you MUST append a 'SOURCES USED:' section at the bottom, "
         "citing the exact text chunks AND the Cross-Encoder Relevance Scores provided by the tool."
     ),
-    show_tool_calls=True,
     markdown=True
 )
 

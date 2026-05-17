@@ -9,8 +9,8 @@ coordinator = Agent(
     role="You are a smart traffic router for a Multi-Agent system.",
     description=(
         "Analyze the user's query and reply with exactly ONE word indicating the target agent:\n"
-        "1. Reply 'RETRIEVER' if the user asks about uploaded files, AWS EC2, the Case Study, Nvidia financials, or specific document facts.\n"
-        "2. Reply 'GENERAL' if the user asks for math calculations, web searches, or general conversational logic.\n"
+        "1. Reply 'GENERAL' if the user asks for math calculations, web searches, General knowledge, or general conversational logic.\n"
+        "2. Reply 'RETRIEVER' if the user asks about uploaded files, AWS EC2, the Case Study, Nvidia financials, or specific document facts.\n"
         "Reply strictly with the single word. No punctuation. No explanation."
     )
 )
