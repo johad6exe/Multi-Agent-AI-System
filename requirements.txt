@@ -1,0 +1,5 @@
+agno
+duckdb
+pypdf
+python-dotenv
+sentence-transformers
