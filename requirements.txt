@@ -1,5 +1,6 @@
 agno
-duckdb
+lancedb
+tantivy
 pypdf
 python-dotenv
 sentence-transformers
