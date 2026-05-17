@@ -3,3 +3,4 @@ duckdb
 pypdf
 python-dotenv
 sentence-transformers
+duckduckgo-search
