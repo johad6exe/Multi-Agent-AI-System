@@ -1,4 +1,4 @@
-# 🤖 Multi-Agent Research Assistant (GenAI Case Study)
+# 🤖 Multi-Agent Research Assistant
 
 An enterprise-grade, Multi-Agent AI architecture designed to intelligently route user queries, perform mathematical calculations, execute real-time web searches, and query dense document repositories using a high-precision Two-Stage RAG pipeline.
 
