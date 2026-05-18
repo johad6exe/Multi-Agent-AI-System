@@ -7,5 +7,5 @@ pypdf
 python-dotenv
 sentence-transformers
 ddgs
-fastapi
-uvicorn
+streamlit
+torchvision

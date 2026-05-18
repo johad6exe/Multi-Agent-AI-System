@@ -10,6 +10,7 @@ load_dotenv()
 if not os.getenv("OPENROUTER_API_KEY"):
     sys_logger.critical("OPENROUTER_API_KEY is missing from your .env file!")
 
+
 llm_model = OpenRouter(
     id=os.getenv("OPENROUTER_MODEL", "anthropic/claude-3.5-sonnet"),
     api_key=os.getenv("OPENROUTER_API_KEY")
@@ -33,9 +34,9 @@ retriever_agent = Agent(
     tools=[advanced_rag_search],
     # FIX: We update the prompt to instruct the agent to output the Relevance Scores
     description=(
-        "You must use the 'advanced_rag_search' tool to find answers in the knowledge base. "
-        "When you reply, you MUST append a 'SOURCES USED:' section at the bottom, "
-        "citing the exact text chunks AND the Cross-Encoder Relevance Scores provided by the tool."
+        "You must use the 'advanced_rag_search' tool to find answers in the knowledge base."
+        "When you reply, you MUST append a 'SOURCES USED:' section at the bottom, citing the exact text chunks with text from the relevant chunks justifying your answer, AND the Cross-Encoder Relevance Scores provided by the tool."
+        "You are responsible for answering questions based ONLY on the provided knowledge base context. If the context does not contain the answer, state explicitly that the information is unavailable in the documents."
     ),
     markdown=True
 )
