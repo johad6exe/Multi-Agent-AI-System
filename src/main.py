@@ -6,12 +6,13 @@ from src.logger import sys_logger
 coordinator = Agent(
     name="Coordinator",
     model=llm_model,
-    role="You are a smart traffic router for a Multi-Agent system.",
+    role="You are a strict, deterministic traffic router for a Multi-Agent system.",
     description=(
-        "Analyze the user's query and reply with exactly ONE word indicating the target agent:\n"
-        "1. Reply 'GENERAL' if the user asks for math calculations, web searches, General knowledge, or general conversational logic.\n"
-        "2. Reply 'RETRIEVER' if the user asks about uploaded files, AWS EC2, the Case Study, Nvidia financials, or specific document facts.\n"
-        "Reply strictly with the single word. No punctuation. No explanation."
+        "Analyze the user's query and classify it. Reply with EXACTLY ONE WORD:\n\n"
+        "1. Reply 'RETRIEVER' ONLY if the user explicitly asks to search the knowledge base, or asks about historical documents like the GenAI Case Study, AWS EC2 manual, or Nvidia's PAST financial filings (e.g., 2024 revenue).\n"
+        "2. Reply 'GENERAL' for ABSOLUTELY EVERYTHING ELSE. This explicitly includes: math equations, world trivia, greetings, AND requests for real-time data.\n\n"
+        "CRITICAL RULE: Even if a keyword like 'Nvidia' is mentioned, if the user asks for CURRENT or LIVE data (like 'today's stock price' or 'recent news'), you MUST route to 'GENERAL' so it can search the web.\n\n"
+        "Reply strictly with the single word 'RETRIEVER' or 'GENERAL'. No punctuation. No explanation."
     )
 )
 
