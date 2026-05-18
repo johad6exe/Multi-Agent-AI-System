@@ -3,6 +3,7 @@ import numpy as np
 from sentence_transformers import CrossEncoder
 from src.knowledge import knowledge_base
 from src.logger import sys_logger
+from src.knowledge import vector_db
 
 def evaluate_math_expression(expression: str) -> str:
     # Evaluates a mathematical expression string.
@@ -59,7 +60,7 @@ def advanced_rag_search(query: str) -> str:
     try:
         # STAGE 1: High Recall Hybrid Search (LanceDB pulls top 15)
         # Because knowledge_base is configured with SearchType.hybrid, this does both vector & keyword search automatically.
-        raw_results = knowledge_base.search(query, num_documents=15)
+        raw_results = vector_db.search(query, limit=15)
         
         if not raw_results:
             return "No relevant documents found in the knowledge base."

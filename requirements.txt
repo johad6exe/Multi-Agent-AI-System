@@ -1,6 +1,7 @@
 agno
 openai
 lancedb
+pylance
 tantivy
 pypdf
 python-dotenv
