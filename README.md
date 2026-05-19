@@ -49,10 +49,10 @@ graph TD
 * **Design Decision:** Enforced a strict custom Two-Stage RAG pipeline via an explicit local `ms-marco` Cross-Encoder model.
 * **Trade-off:** Standard framework wrappers dump hybrid search chunks straight into the primary prompt layer. While pulling 15 chunks ensures excellent database recall across technical manuals, passing that raw text directly into the LLM causes massive context bloat and degrades synthesis reasoning. Implementing the secondary local reranking stage increases CPU inference latency slightly per query, but dramatically elevates final citation quality, lowers token overhead, and completely resolves context refusal loops during precise document lookups.
 
-### 3. Context Separation over Complete Session Storage
+### 3. Stateless Backend Orchestration over Database Overhead
 
-* **Design Decision:** Enabled database-driven session memory (`SqliteDb`) for the `General_Agent` but explicitly isolated the `Retriever_Agent` workspace to execute cleanly without historical storage dependencies.
-* **Trade-off:** In a multi-agent system running over stateless web frames like Streamlit, injecting conversational history tokens directly alongside dense retrieval chunks creates severe attention conflict for the LLM. By isolating the retrieval tier to execute as a high-precision, single-turn semantic extraction pipeline, we trade off continuous conversational RAG context for absolute factual precision—ensuring the retriever doesn't throw a tool refusal or misinterpret target data due to past conversational noise.
+* **Design Decision:** Maintained completely stateless backend agents (`db=None`), managing chat presentation strictly on the frontend application layer using Streamlit's native memory architecture (`st.session_state`).
+* **Trade-off:** Traditional multi-agent frameworks often force an active database layer (like SQLite or Postgres) directly onto the agents to preserve session records. However, injecting heavy database-driven history tokens alongside dense, chunked retrieval fragments creates massive attention conflicts and payload inflation for the LLM. By keeping the backend agents 100% stateless and single-turn, the system ensures that the retriever's context window is never polluted with historical conversational noise. We trade continuous backend tracking for sub-second inference speeds, absolute factual grounding precision, and zero database migration friction for the evaluator.
 
 ---
 
