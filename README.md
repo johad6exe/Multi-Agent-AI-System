@@ -54,6 +54,10 @@ graph TD
 * **Design Decision:** Maintained completely stateless backend agents (`db=None`), managing chat presentation strictly on the frontend application layer using Streamlit's native memory architecture (`st.session_state`).
 * **Trade-off:** Traditional multi-agent frameworks often force an active database layer (like SQLite or Postgres) directly onto the agents to preserve session records. However, injecting heavy database-driven history tokens alongside dense, chunked retrieval fragments creates massive attention conflicts and payload inflation for the LLM. By keeping the backend agents 100% stateless and single-turn, the system ensures that the retriever's context window is never polluted with historical conversational noise. We trade continuous backend tracking for sub-second inference speeds, absolute factual grounding precision, and zero database migration friction for the evaluator.
 
+### 4. Vector-Native Database Selection (LanceDB vs. DuckDB)
+
+* **Design Decision:** Selected **LanceDB** as the core database engine instead of traditional analytical choices like DuckDB.
+* **Trade-off:** DuckDB is an exceptional tool for structured SQL table analytics, but it lacks native, optimized indexing structures for high-dimensional vector embeddings. Because our Two-Stage RAG workflow requires combining Full-Text keyword matching with dense semantic vector searches, utilizing an AI-native database like LanceDB was paramount. LanceDB's disk-backed, zero-copy architecture allows the pipeline to execute lightning-fast hybrid lookups with sub-second latency, without introducing the heavy RAM overhead or complex custom SQL extension configuration that DuckDB would require.
 ---
 
 ## 🛡️ Enterprise Safety Guardrails
