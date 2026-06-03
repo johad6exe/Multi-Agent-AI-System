@@ -6,6 +6,5 @@ tantivy
 pypdf
 python-dotenv
 sentence-transformers
-ddgs
 streamlit
 torchvision
