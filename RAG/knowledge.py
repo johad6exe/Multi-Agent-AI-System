@@ -1,15 +1,13 @@
-# src/knowledge.py
-import os
-import shutil
+#agno imports
 from agno.knowledge.knowledge import Knowledge
 from agno.vectordb.lancedb import LanceDb, SearchType
 from agno.knowledge.embedder.sentence_transformer import SentenceTransformerEmbedder
 from agno.knowledge.reranker.sentence_transformer import SentenceTransformerReranker
 
-# 1. Initialize the Local Embedder
+# Small, efficient and fast embedding model
 embedder = SentenceTransformerEmbedder(id="BAAI/bge-small-en-v1.5")
 
-# 2. Configure the Knowledge Base
+# Knowledge base 
 knowledge_base = Knowledge(
     vector_db=LanceDb(
         table_name="research_documents",

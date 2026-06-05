@@ -1,5 +1,7 @@
+#agno import
 from agno.agent import Agent
-from Agents.agents import llm_model
+#module import
+from config import llm_model
 
 coordinator = Agent(
     name="Coordinator",

@@ -1,40 +1,34 @@
 import os
 import shutil
+#agno imports
 from agno.knowledge.reader.pdf_reader import PDFReader
-from agno.knowledge.chunking.fixed import FixedSizeChunking
+from agno.knowledge.chunking.document import DocumentChunking
+#module imports
 from RAG.knowledge import knowledge_base
 from tracing.logger import sys_logger
 
-# Ensure local directories exist
-os.makedirs("data", exist_ok=True)
-os.makedirs("storage/lancedb_store", exist_ok=True)
-
+#ingests docs into VectorDB and builds the index
 def initialize_knowledge_base(recreate: bool = False):
-    """
-    Ingests documents into the LanceDB vector database and builds the index.
-    """
     try:
+        os.makedirs("data", exist_ok=True)
+        files = [f for f in os.listdir("data") if f.endswith('.pdf') or f.endswith('.md') or f.endswith('.txt')]
+        if not files:
+            sys_logger.warning("Files not found in target directory.")
+            return
+
         # Safely wipe the local storage if we want a fresh start
         if recreate and os.path.exists("storage/lancedb_store"):
             sys_logger.info("Recreate flag passed: Wiping old LanceDB vectors for a clean build...")
             shutil.rmtree("storage/lancedb_store")
             os.makedirs("storage/lancedb_store", exist_ok=True)
-
-        files = [f for f in os.listdir("data") if f.endswith('.pdf') or f.endswith('.md') or f.endswith('.txt')]
-        if not files:
-            sys_logger.warning("No files found in 'data/' to embed.")
-            return
-
+        
         sys_logger.info(f"Embedding documents {files} into LanceDB")
         
-        # 4. Define the PDF Reader 
         pdf_reader = PDFReader(
-                        chunking_strategy=FixedSizeChunking(chunk_size=1000, overlap=200),
+                        chunking_strategy=DocumentChunking(chunk_size=1000, overlap=200),
                     )
-        
-        # 5. FIX: Use '.insert()' instead of '.load()'. 
-        knowledge_base.insert(path="data", reader=pdf_reader) 
-        
+        knowledge_base.insert(path="data", reader=pdf_reader)
+         
         sys_logger.info("LanceDB knowledge base successfully indexed and optimized.")
         
     except Exception as e:
