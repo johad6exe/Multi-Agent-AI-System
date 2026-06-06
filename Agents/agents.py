@@ -37,8 +37,13 @@ retriever_agent = Agent(
     instructions=[
         "Format the answer in a structured way for better readability.",
         "You are responsible for answering questions based ONLY on the provided knowledge base context.",
-        "If the context does not contain the answer, state explicitly that the information is unavailable."
+        "If the context does not contain the answer, state explicitly that the information is unavailable.",
+        # rules for source chunks & citing
+        "CRITICAL: At the end of every response, you MUST include a section titled '### 📚 Sources'.",
+        "For each piece of information used, cite the document name and page number found in the provided references metadata.",
+        "Example format: - [Doc Name] (Page X)"
     ],
+    debug_mode = True,
     search_knowledge=False,        # Stops the agent from running slow tool-use thinking loops
     add_knowledge_to_context=True,  # Automatically injects relevant context into the initial prompt
     markdown=True
