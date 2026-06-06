@@ -1,18 +1,24 @@
 import os
+from dotenv import load_dotenv
 #agno imports
 from agno.agent import Agent
-from agno.tools.duckduckgo import DuckDuckGoTools
+# from agno.tools.duckduckgo import DuckDuckGoTools
+from agno.tools.tavily import TavilyTools
 from agno.tools.calculator import CalculatorTools
 #module imports
 from RAG.knowledge import knowledge_base
 from tracing.logger import sys_logger
 from config import agent_model
 
+load_dotenv()
+if not (TAVILY_KEY := os.getenv("TAVILY_KEY")):
+    sys_logger.warning("Tavily API key is missing!!")
+    
 # 1. The General Reasoning Agent
 general_agent = Agent(
     name="General_Agent",
     model=agent_model,
-    tools=[CalculatorTools(), DuckDuckGoTools(fixed_max_results=5, enable_news=False)],
+    tools=[CalculatorTools(), TavilyTools(api_key=TAVILY_KEY,search_depth = "basic")],
     role="You are a brilliant multipurpose reasoning agent. You handle general inquiries, logic, and mathematics.",
     instructions=[
         "You must use the provided web search tool for any query asking for live, historical, or general knowledge data.",

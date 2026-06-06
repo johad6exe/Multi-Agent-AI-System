@@ -13,8 +13,8 @@ load_dotenv()
 
 ROUTING_KEY = os.getenv("GROQ_API")
 AGENT_KEY = os.getenv("OPENROUTER_API_KEY")
-if not AGENT_KEY :
-    sys_logger.critical("OPENROUTER_API_KEY is missing from your .env file!")
+if not AGENT_KEY and ROUTING_KEY:
+    sys_logger.critical("API key for LLM call is missing from your .env file!")
 
 ROUTING_MODEL = "llama-3.1-8b-instant"
 LLM_MODEL = "google/gemini-2.5-flash-lite"
