@@ -5,25 +5,29 @@ from tracing.logger import sys_logger
 
 
 def extract_unique_chunks(response):
-    """Extract and deduplicate chunks from all tool message calls."""
+    """Extract chunks cleanly from Agno's pre-retrieved context."""
     all_chunks = []
+    # If the framework attached references directly to the response object
+    if hasattr(response, 'context_data') and response.context_data:
+        # Access pre-retrieved chunks safely depending on framework versions
+        return response.context_data
+    
+    # Fallback parser for standard message evaluation
     seen = set()
-
-    for msg in response.messages:
-        if msg.role == "tool" and isinstance(msg.content, str):
-            try:
-                chunks = json.loads(msg.content)
-                if not isinstance(chunks, list):
+    if hasattr(response, 'messages'):
+        for msg in response.messages:
+            if msg.role == "tool" and isinstance(msg.content, str):
+                try:
+                    chunks = json.loads(msg.content)
+                    if not isinstance(chunks, list): continue
+                    for chunk in chunks:
+                        meta = chunk.get("meta_data", {})
+                        key = (chunk.get("name"), meta.get("page"), meta.get("chunk"))
+                        if key not in seen:
+                            seen.add(key)
+                            all_chunks.append(chunk)
+                except Exception:
                     continue
-                for chunk in chunks:
-                    meta = chunk.get("meta_data", {})
-                    key = (chunk.get("name"), meta.get("page"), meta.get("chunk"))
-                    if key not in seen:
-                        seen.add(key)
-                        all_chunks.append(chunk)
-            except (json.JSONDecodeError, TypeError):
-                continue
-
     return all_chunks
 
 
@@ -54,35 +58,36 @@ def run_assistant():
             print(f"\n[System Route] -> Delegating to {route} AGENT...")
 
             if "RETRIEVER" in route:
-                response = retriever_agent.run(user_query, stream=False)
+                retriever_agent.print_response(user_query, stream=True)
+                # response = retriever_agent.run(user_query, stream=False)
 
-                # ── Retrieved Chunks ───────────────────────────────────
-                unique_chunks = extract_unique_chunks(response)
+                # # ── Retrieved Chunks ───────────────────────────────────
+                # unique_chunks = extract_unique_chunks(response)
 
-                print("\n" + "=" * 60)
-                print(f"📚 RETRIEVED CHUNKS ({len(unique_chunks)} unique)")
-                print("=" * 60)
+                # print("\n" + "=" * 60)
+                # print(f"📚 RETRIEVED CHUNKS ({len(unique_chunks)} unique)")
+                # print("=" * 60)
 
-                if unique_chunks:
-                    for i, chunk in enumerate(unique_chunks, 1):
-                        meta = chunk.get("meta_data", {})
-                        content = chunk.get("content", "")
-                        name = chunk.get("name", "unknown")
+                # if unique_chunks:
+                #     for i, chunk in enumerate(unique_chunks, 1):
+                #         meta = chunk.get("meta_data", {})
+                #         content = chunk.get("content", "")
+                #         name = chunk.get("name", "unknown")
 
-                        print(f"\n── Chunk {i} {'─' * 44}")
-                        print(f"  📄 File    : {name}")
-                        print(f"  📃 Page    : {meta.get('page', 'N/A')}")
-                        print(f"  🔢 Chunk # : {meta.get('chunk', 'N/A')}")
-                        print(f"  📏 Size    : {meta.get('chunk_size', 'N/A')} tokens")
-                        print(f"\n  📝 Content :\n  {content}")
-                else:
-                    print("\n  ⚠️  No chunks retrieved from knowledge base.")
+                #         print(f"\n── Chunk {i} {'─' * 44}")
+                #         print(f"  📄 File    : {name}")
+                #         print(f"  📃 Page    : {meta.get('page', 'N/A')}")
+                #         print(f"  🔢 Chunk # : {meta.get('chunk', 'N/A')}")
+                #         print(f"  📏 Size    : {meta.get('chunk_size', 'N/A')} tokens")
+                #         print(f"\n  📝 Content :\n  {content}")
+                # else:
+                #     print("\n  ⚠️  No chunks retrieved from knowledge base.")
 
-                # ── Final Answer ───────────────────────────────────────
-                print("\n" + "=" * 60)
-                print("💬 AGENT RESPONSE")
-                print("=" * 60)
-                print(f"\n{response.content}\n")
+                # # ── Final Answer ───────────────────────────────────────
+                # print("\n" + "=" * 60)
+                # print("💬 AGENT RESPONSE")
+                # print("=" * 60)
+                # print(f"\n{response.content}\n")
 
             else:
                 general_agent.print_response(user_query, stream=True)

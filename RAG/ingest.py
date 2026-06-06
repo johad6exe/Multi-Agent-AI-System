@@ -1,5 +1,6 @@
 import os
 import shutil
+import lancedb
 #agno imports
 from agno.knowledge.reader.pdf_reader import PDFReader
 from agno.knowledge.chunking.document import DocumentChunking
@@ -25,9 +26,15 @@ def initialize_knowledge_base(recreate: bool = False):
         sys_logger.info(f"Embedding documents {files} into LanceDB")
         
         pdf_reader = PDFReader(
-                        chunking_strategy=DocumentChunking(chunk_size=1000, overlap=200),
+                        chunking_strategy=DocumentChunking(chunk_size=500, overlap=100),
                     )
         knowledge_base.insert(path="data", reader=pdf_reader)
+        
+        # Building native Full-Text Search index for true keyword-matching fallback
+        sys_logger.info("Building Full-Text Search index for hybrid retrieval...")
+        db = lancedb.connect("storage/lancedb_store")
+        table = db.open_table("research_documents")
+        table.create_fts_index("payload", replace=True)
          
         sys_logger.info("LanceDB knowledge base successfully indexed and optimized.")
         
