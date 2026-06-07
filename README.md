@@ -1,127 +1,256 @@
-# 🤖 Multi-Agent Research Assistant
+# 🧠 Research Multi-Agent System
 
-An enterprise-grade, Multi-Agent AI architecture designed to intelligently route user queries, perform mathematical calculations, execute real-time web searches, and query dense document repositories using a high-precision Two-Stage RAG pipeline.
+A production-ready multi-agent AI system built on the **Agno Agent OS** framework. It routes user queries to either a RAG-powered document retriever or a general-purpose reasoning agent, backed by a hybrid LanceDB vector store, Cohere reranking, and optional Tavily web search.
 
 ---
 
-## 🏗️ Architecture & Control Flow
-
-The system employs a centralized Coordinator pattern to cleanly separate intent classification from task execution. This decoupling keeps context windows lightweight, eliminates tool execution conflicts, and optimizes downstream reasoning.
+## 📐 Architecture
 
 ```mermaid
-graph TD
-    A[User Query] --> B(Coordinator Agent)
-    
-    B -- "Past Facts / Internal Docs" --> C[Retriever Agent]
-    B -- "Math / Live Web / General" --> D[General Agent]
-    
-    C --> E[Advanced RAG Tool]
-    E --> F[(LanceDB Vector Store)]
-    F -- "Top 15 Chunks (Hybrid)" --> G[Cross-Encoder Reranker]
-    G -- "Top 3 Chunks (Precise)" --> C
-    
-    D --> H[Math Evaluation Tool]
-    D --> I[DuckDuckGo Web Tool]
-    
-    C --> J[Final Response + Citations]
-    D --> J
+flowchart TD
+    User(["👤 User / Playground UI\n(AgentOS · FastAPI · Port 7777)"])
 
+    User --> Coordinator
+
+    subgraph Coordinator["🧭 Coordinator Team (TeamMode.route · OpenRouter LLM)"]
+        direction TB
+        Route{"Route Query"}
+        Route -->|"NVIDIA / Microsoft\nfinancial data 2023–25"| R_Label["→ Retriever Agent"]
+        Route -->|"Everything else\n(Q&A · math · real-time · code)"| G_Label["→ General Agent"]
+    end
+
+    R_Label --> RetrieverAgent
+    G_Label --> GeneralAgent
+
+    subgraph RetrieverAgent["📄 Retriever Agent (Agno · OpenRouter)"]
+        direction TB
+        KB["Knowledge Base"]
+        KB --> LanceDB["LanceDB Vector Store\n──────────────────\nEmbedder: NVIDIA Llama Nemotron\n(via OpenRouter)\n──────────────────\nSearch: Hybrid (Vector + BM25 FTS)\n──────────────────\nReranker: Cohere rerank-multilingual-v3.0\ntop_n=3"]
+    end
+
+    subgraph GeneralAgent["🌐 General Agent (Agno · OpenRouter)"]
+        direction TB
+        Tools["Tools"]
+        Tools --> Tavily["TavilyTools\n(web search)"]
+        Tools --> Calc["CalculatorTools\n(math)"]
+    end
 ```
 
-### Execution Lifecycles
+### Data Ingestion Pipeline
 
-1. **Ingestion Loop:** Local text and reference PDF manuals are ingested via standard PDF parsers, processed into semantic chunks, transformed into vector representations using localized embedding weights, and written to a performant local **LanceDB** database.
-2. **Orchestration Loop:** User prompts target the **Coordinator** first. The Coordinator operates as a deterministic semantic router, evaluating the payload and emitting exactly one categorical route token: `GENERAL` or `RETRIEVER`.
-3. **Execution Loop (Worker Tier):** The custom Streamlit application layer intercepts the routing token and hands execution off to the corresponding target agent workspace (`General_Agent` or `Retriever_Agent`).
-4. **Two-Stage RAG Validation:** When routed to the `Retriever_Agent`, the system runs a fast, hybrid search across LanceDB (extracting 15 candidate chunks), which are mathematically scored and filtered down locally via an `ms-marco` Cross-Encoder to the absolute top 3 most precise fragments before hitting the LLM context window.
+```mermaid
+flowchart TD
+    Docs(["📂 Source Files\n./data/\n(.pdf · .md · .txt)"])
 
----
+    Docs --> Reader["PDFReader (Agno)\nDocumentChunking\nchunk_size=600 · overlap=100"]
 
-## 🧠 Design Decisions & Trade-offs
+    Reader --> Embedder["NVIDIA Llama Nemotron Embedder\n(OpenRouter · text → dense vectors)"]
 
-### 1. UI Implementation Pivot (Agno vs. Streamlit)
+    Embedder --> LanceDB[("LanceDB Vector Store\nstorage/lancedb_store\ntable: research_documents")]
 
-* **Design Decision:** Built a clean, local **Streamlit** dashboard instead of forcing a connection to Agno's legacy UI utilities.
-* **Trade-off:** The initial assignment parameters assumed legacy Phidata v1 architecture layouts. With the framework's major upgrade to Agno v2, the bundled React web panel was completely decoupled from the open-source package, changing `AgentOS` into a headless FastAPI server requiring external cloud account synchronization to display visually. By pivoting to an independent Streamlit orchestration layer, the project maintains 100% data privacy and instant local execution with a single Python command, entirely removing complex external Node.js/pnpm runtimes and build vulnerabilities from the setup footprint.
+    LanceDB --> FTS["BM25 Full-Text Search Index\ntable.create_fts_index('payload')"]
+    LanceDB --> VecIdx["Dense Vector Index\n(cosine similarity)"]
 
-### 2. Retrieval Optimization: Local Cross-Encoder Reranking
+    FTS --> Hybrid["🔀 Hybrid Search\nSearchType.hybrid"]
+    VecIdx --> Hybrid
 
-* **Design Decision:** Enforced a strict custom Two-Stage RAG pipeline via an explicit local `ms-marco` Cross-Encoder model.
-* **Trade-off:** Standard framework wrappers dump hybrid search chunks straight into the primary prompt layer. While pulling 15 chunks ensures excellent database recall across technical manuals, passing that raw text directly into the LLM causes massive context bloat and degrades synthesis reasoning. Implementing the secondary local reranking stage increases CPU inference latency slightly per query, but dramatically elevates final citation quality, lowers token overhead, and completely resolves context refusal loops during precise document lookups.
+    Hybrid --> Reranker["Cohere Cross-Encoder Reranker\nrerank-multilingual-v3.0\ntop_n=3"]
 
-### 3. Stateless Backend Orchestration over Database Overhead
-
-* **Design Decision:** Maintained completely stateless backend agents (`db=None`), managing chat presentation strictly on the frontend application layer using Streamlit's native memory architecture (`st.session_state`).
-* **Trade-off:** Traditional multi-agent frameworks often force an active database layer (like SQLite or Postgres) directly onto the agents to preserve session records. However, injecting heavy database-driven history tokens alongside dense, chunked retrieval fragments creates massive attention conflicts and payload inflation for the LLM. By keeping the backend agents 100% stateless and single-turn, the system ensures that the retriever's context window is never polluted with historical conversational noise. We trade continuous backend tracking for sub-second inference speeds, absolute factual grounding precision, and zero database migration friction for the evaluator.
-
-### 4. Vector-Native Database Selection (LanceDB vs. DuckDB)
-
-* **Design Decision:** Selected **LanceDB** as the core database engine instead of traditional analytical choices like DuckDB.
-* **Trade-off:** DuckDB is an exceptional tool for structured SQL table analytics, but it lacks native, optimized indexing structures for high-dimensional vector embeddings. Because our Two-Stage RAG workflow requires combining Full-Text keyword matching with dense semantic vector searches, utilizing an AI-native database like LanceDB was paramount. LanceDB's disk-backed, zero-copy architecture allows the pipeline to execute lightning-fast hybrid lookups with sub-second latency, without introducing the heavy RAM overhead or complex custom SQL extension configuration that DuckDB would require.
----
-
-## 🛡️ Enterprise Safety Guardrails
-
-The architecture implements systematic guardrails, strategically split across the agent topology to maintain maximum inference speed while preventing typical AI security exploits:
-
-* **Prompt Injection Firewalls (Coordinator Level):** The routing system is explicitly hardened against adversarial instructions. Attempts to impersonate administrative privileges, claim system overrides, or force a specific token response are actively filtered out. The Coordinator treats injection inputs strictly as user prose and routes them based on structural intent rather than command instructions.
-* **Factual Grounding Anchor (Retriever Level):** The retrieval workspace is tightly anchored to the vectorized facts. The prompt space enforces strict negative alignment constraints: if the reranked chunks do not contain absolute verification for a claim, the agent is structurally barred from using its base parametric weights to invent a fact, forcing a graceful, transparent admission that the information is absent from corporate records.
-* **Execution Sandbox Rules (General Level):** The mathematical evaluation workspace restricts parsing formats exclusively to standard deterministic Python math notations, stripping out potential runtime commands to prevent remote code execution (RCE) attempts hidden in string structures.
+    Reranker --> Context["✅ Context Injected into\nRetriever Agent Prompt\n(add_knowledge_to_context=True)"]
+```
 
 ---
 
-## 🚀 How to Run
+## 📁 Project Structure
 
-### 1. Install Dependencies
+```
+Multi-Agent-AI-System/
+├── Agents/
+│   ├── agents.py               # Retriever Agent & General Agent definitions
+│   └── orchestrator.py         # Coordinator Team (router)
+├── agent-ui/                   # AgentOS frontend UI assets
+├── data/
+│   ├── Microsoft_10k.pdf       # Microsoft 10-K filing (source document)
+│   └── nvidia_10k.pdf          # NVIDIA 10-K filing (source document)
+├── evaluations/
+│   ├── evaluate_rag.py         # RAG retrieval quality evaluation scripts
+│   └── evaluate_routing.py     # Coordinator routing accuracy evaluation
+├── RAG/
+│   ├── ingest.py               # PDF ingestion, chunking, FTS index builder
+│   └── knowledge.py            # LanceDB Knowledge base config
+├── storage/
+│   └── lancedb_store/          # Persisted vector DB (auto-created on ingest)
+│       ├── __manifest          # LanceDB internal manifest
+│       └── research_documents.lance
+├── tracing/
+│   └── logger.py               # Centralized logging utility
+├── .env                        # API keys (not committed)
+├── .gitignore
+├── config.py                   # All model, embedder, reranker, key config
+├── debug_db.py                 # LanceDB inspection / debugging utility
+├── debug_schema.py             # Schema validation / debugging utility
+├── main.py                     # CLI entrypoint for running agents directly
+├── playground.py               # AgentOS FastAPI entrypoint (port 7777)
+├── README.md
+└── requirements.txt
+```
 
-Run the clean-room installation to ensure all required visualization, RAG, database, and infrastructure helper libraries are present:
+---
+
+## ⚙️ Setup & Installation
+
+### 1. Clone and create a virtual environment
+
+```bash
+git clone <your-repo-url>
+cd <repo-name>
+python -m venv venv
+source venv/bin/activate      # Windows: venv\Scripts\activate
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
-
 ```
 
-### 2. Configure Environment
+### 3. Configure environment variables
 
-Create a `.env` file in the root directory of your project:
+Create a `.env` file in the project root:
 
 ```env
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_MODEL=google/gemini-2.0-flash-001
-
+OPENROUTER_API_KEY=your_openrouter_key
+TAVILY_KEY=your_tavily_key
+COHERE_API_KEY=your_cohere_key
 ```
 
-### 3. Initialize the Knowledge Base
+| Variable | Purpose |
+|---|---|
+| `OPENROUTER_API_KEY` | Powers the LLM (GPT-OSS 120B via OpenRouter) and the NVIDIA embedder |
+| `TAVILY_KEY` | Web search for the General Agent |
+| `COHERE_API_KEY` | Cross-encoder reranking in the Retriever Agent |
 
-Run the embedding pipeline to parse, chunk, and index local documents into the LanceDB database:
+### 4. Add documents
+
+Place your `.pdf`, `.md`, or `.txt` files inside the `data/` directory.
+
+### 5. Ingest documents into LanceDB
 
 ```bash
-python -m src.knowledge
-
+python -m RAG.ingest
 ```
 
-### 4. Launch the Web UI Dashboard
+This will:
+- Chunk all documents (chunk size: 600 tokens, overlap: 100)
+- Embed them using NVIDIA Llama Nemotron via OpenRouter
+- Store dense vectors in LanceDB
+- Build a BM25 full-text search index on the `payload` column
 
-Boot the multi-agent UI application layer using Python's module flag to guarantee absolute path mapping:
+> Pass `recreate=True` (already set in `__main__`) to wipe and rebuild the index from scratch — use this when you update source documents to avoid duplicate vectors.
+
+### 6. Launch the playground
 
 ```bash
-python -m streamlit run src/ui.py
-
+python playground.py
 ```
 
-*Your browser will automatically open to the interactive engine workspace at `http://localhost:8501`.*
+The AgentOS FastAPI server starts at `http://localhost:7777`. Open the AgentOS UI in your browser to interact with the system.
 
-### 5. Run the Automated Evaluation Matrix
+---
 
-To verify the system's routing accuracy, mathematical performance, and prompt injection defense barriers across all 20 adversarial target queries, run the local evaluation script:
+## 🔍 How Routing Works
 
-```bash
-python -m src.evaluate
+The **Coordinator Team** inspects each user query using `TeamMode.route` and dispatches it to exactly one agent:
 
-```
+| Query type | Routed to |
+|---|---|
+| NVIDIA / Microsoft financial metrics, risk factors, disclosures (2023–25) | `Retriever Agent` |
+| Real-time stock prices | `General Agent` (Tavily web search) |
+| Math / calculations | `General Agent` (Calculator tool) |
+| General knowledge, coding, conversation | `General Agent` |
 
-*For a detailed breakdown of the testing matrix, adversarial edge cases, and expected routing behavior, please review `EVALUATION.md`.*
+---
 
-```
+## 🤖 Agents
 
+### Retriever Agent
+
+- Uses `add_knowledge_to_context=True` — retrieved chunks are injected directly into the model prompt rather than relying on an autonomous search tool call. This guarantees the context is always present.
+- `search_knowledge=False` disables the agent's autonomous tool-call search, keeping retrieval fully controlled by the knowledge base pipeline.
+- Responds with a structured answer and an **Evidence & Sources** section citing document name, page number, and a summarized snippet per chunk used.
+
+### General Agent
+
+- Has access to **TavilyTools** (`search_depth="basic"`) for live web queries.
+- Has access to **CalculatorTools** for arithmetic and math expressions.
+- Falls back to the LLM's own knowledge for factual/conversational queries.
+
+---
+
+## 🏗️ Design Decisions
+
+### 1. Hybrid Search (Vector + BM25) over pure vector search
+
+Pure semantic search can miss exact-match queries (e.g., a specific revenue figure, a ticker symbol, a year). BM25 keyword matching covers these cases reliably. Combining both via `SearchType.hybrid` in LanceDB gives the best of both retrieval paradigms without running two separate databases.
+
+### 2. Cohere cross-encoder reranking (`top_n=3`)
+
+Initial hybrid retrieval can return semantically similar but contextually weak chunks. A cross-encoder reranker scores each chunk against the full query jointly (rather than independently), producing a significantly more relevant final context window. Limiting to `top_n=3` keeps token consumption low while maximizing precision.
+
+### 3. `add_knowledge_to_context=True` + `search_knowledge=False`
+
+This combination makes the Retriever Agent's behavior deterministic. Instead of the agent autonomously deciding when and whether to search, the knowledge base context is always pre-injected into the prompt. This removes a failure mode where the agent skips retrieval and answers from parametric memory.
+
+### 4. OpenRouter as a unified inference gateway
+
+All LLM and embedding calls route through OpenRouter. This decouples the system from any single provider — the model string in `config.py` (`LLM_MODEL`) is the only thing that needs to change to swap models. The NVIDIA Llama Nemotron embedding model is also served through OpenRouter, eliminating a separate API key.
+
+### 5. Coordinator as a `Team` with `TeamMode.route`
+
+Agno's `TeamMode.route` is a single-dispatch pattern — the coordinator evaluates the query once and forwards it to exactly one member. This is simpler and cheaper than `TeamMode.collaborate` (where multiple agents respond and results are merged) and appropriate here since the two agents have mutually exclusive domains.
+
+### 6. Centralized config in `config.py`
+
+All models, keys, and external service clients are instantiated once in `config.py` and imported wherever needed. This prevents multiple client initializations and makes model/provider swaps a single-line change.
+
+### 7. `recreate` flag in ingestion
+
+The `recreate=True` flag in `initialize_knowledge_base` performs a hard wipe of `storage/lancedb_store` before re-ingesting. This is intentional: LanceDB does not deduplicate on re-insert, so running ingestion twice without wiping produces duplicate vectors and degrades retrieval quality. The flag makes the safe path explicit.
+
+---
+
+## ⚖️ Tradeoffs
+
+| Decision | Benefit | Cost |
+|---|---|---|
+| Hybrid BM25 + vector search | Handles both semantic and keyword queries | Requires building and maintaining a separate FTS index on `payload`; index must be rebuilt on schema changes |
+| Cohere reranker (`top_n=3`) | High-precision final context | Extra API call per retrieval; adds latency; Cohere is a third external dependency |
+| `add_knowledge_to_context` (no autonomous search) | Deterministic, always-on retrieval | Cannot dynamically decide to skip retrieval for off-topic queries — coordinator routing must be accurate |
+| OpenRouter for both LLM and embeddings | Single API key, easy model swaps | Rate limits and availability are subject to OpenRouter's infrastructure; model IDs can change |
+| `TeamMode.route` (single dispatch) | Simple, cheap, predictable | If the coordinator misroutes a query, there is no fallback or retry — the wrong agent handles it entirely |
+| `chunk_size=600, overlap=100` | Good context density; overlap prevents boundary truncation | Larger chunks → more tokens per retrieval call → higher cost; overlap creates minor redundancy |
+| Hard `recreate` wipe on re-ingest | No duplicate vectors | Entire index is rebuilt from scratch every time documents change — no incremental update |
+
+---
+
+## 📋 Environment Dependencies Summary
+
+| Service | Used for | Key |
+|---|---|---|
+| OpenRouter | LLM inference (GPT-OSS 120B) + NVIDIA embedder | `OPENROUTER_API_KEY` |
+| Cohere | Cross-encoder reranking | `COHERE_API_KEY` |
+| Tavily | Live web search (General Agent) | `TAVILY_KEY` |
+| LanceDB | Local vector + FTS storage | — (local file) |
+| Agno Agent OS | Agent/Team orchestration + FastAPI runtime | — (pip package) |
+
+---
+
+## 📝 Logging
+
+All system events are logged via the centralized `sys_logger` (defined in `tracing/logger.py`). Logs are printed to stdout with timestamps, level, and logger name. To add logging elsewhere, import and reuse `setup_logger`:
+
+```python
+from tracing.logger import setup_logger
+logger = setup_logger("MyModule")
+logger.info("Something happened")
 ```
