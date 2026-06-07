@@ -6,18 +6,20 @@ from tracing.logger import sys_logger
 EVALUATION_DATASET = [
     {
         "id": "Q1", 
-        "query": "Hi, I'm ready to test the system. Are you online?", 
-        "expected_route": "GENERAL"
+        "query": "What was Nvidia’s total revenue in fiscal year 2025?", 
+        "expected_answer": "$130,497 million (or $130.5 billion).",
+        "Agent" : "RETRIEVER"
     },
     {
         "id": "Q2", 
-        "query": "What is the value of 2900 // (8 * 3 * 10)?", 
-        "expected_route": "GENERAL"
+        "query": "What were Microsoft's R&D expenses in fiscal year 2025?", 
+        "expected_answer": "Microsoft reported $32.5 billion in R&D expenses for FY2025.",
+        "Agent" : "RETRIEVER"
     },
     {
         "id": "Q3", 
-        "query": "If I buy 45 shares of a stock at $120 and sell them at $155, minus a flat $15 broker fee on the total profit, what is my net gain?", 
-        "expected_route": "GENERAL"
+        "query": "Which company, Microsoft or Nvidia, saw a higher percentage growth in revenue between FY2024 and FY2025?", 
+        "expected_answer": "GENERAL"
     },
     {
         "id": "Q4", 
