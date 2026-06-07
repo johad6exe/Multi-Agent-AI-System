@@ -26,7 +26,7 @@ def initialize_knowledge_base(recreate: bool = False):
         sys_logger.info(f"Embedding documents {files} into LanceDB")
         
         pdf_reader = PDFReader(
-                        chunking_strategy=DocumentChunking(chunk_size=500, overlap=100),
+                        chunking_strategy=DocumentChunking(chunk_size=600, overlap=100),
                     )
         knowledge_base.insert(path="data", reader=pdf_reader)
         

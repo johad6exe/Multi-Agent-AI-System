@@ -1,7 +1,7 @@
 from agno.knowledge.knowledge import Knowledge
 from agno.vectordb.lancedb import LanceDb, SearchType
 # module import
-from config import embedder
+from config import embedder, reranker
 
 # Knowledge base 
 knowledge_base = Knowledge(
@@ -10,6 +10,6 @@ knowledge_base = Knowledge(
         uri="storage/lancedb_store",
         embedder=embedder,
         search_type=SearchType.hybrid,
-        reranker= None
+        reranker= reranker
     )
 )
