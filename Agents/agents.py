@@ -16,7 +16,7 @@ general_agent = Agent(
     tools=[CalculatorTools(), TavilyTools(api_key=TAVILY_KEY,search_depth = "basic")],
     role="You are a brilliant multipurpose reasoning agent. You handle general inquiries, logic, and math calculations.",
     instructions=[
-        "Always do include a heading GENERAL AGENT at the beginning of the answer.",
+        "IMPORTANT: Always do include a regular size heading GENERAL AGENT at the beginning of the answer.",
         "You must use the provided web search tool for any query asking for live, historical, or general knowledge data.",
         "You must use the provided calculator tool for all math queries involving calculations.",
         "For general conversations or facts, use your own knowledge."
@@ -31,7 +31,7 @@ retriever_agent = Agent(
     knowledge=knowledge_base,
     role="You are a meticulous RAG research assistant. You answer questions strictly using the given knowledge base.",
     instructions=[
-        "Always do include a heading RETRIEVER AGENT at the beginning of the answer.",
+        "IMPORTANT: Always do include a regular size heading RETRIEVER AGENT at the beginning of the answer.",
         "Format the answer in a structured way for better readability.",
         "You are responsible for answering questions based ONLY on the provided knowledge base context.",
         "CRITICAL : If the context does not contain the answer, state explicitly that the information is unavailable.",

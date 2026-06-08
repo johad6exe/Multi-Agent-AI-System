@@ -1,10 +1,12 @@
 from agno.os import AgentOS
 # module imports
 from Agents.orchestrator import coordinator
+from Agents.agents import retriever_agent, general_agent
 
 # Initializing the AgentOS runtime with multi-agent workforce
 agent_os = AgentOS(
     name="Research Multi-Agent System",
+    agents=[retriever_agent, general_agent],
     teams=[coordinator]
 )
 

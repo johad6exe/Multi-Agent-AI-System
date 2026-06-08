@@ -11,12 +11,15 @@ load_dotenv()
 
 if not (LLM_KEY := os.getenv("OPENROUTER_API_KEY")):
     sys_logger.critical("Openrouter api key is missing from your .env file!")
+    raise RuntimeError("API key required!")
 
 if not (TAVILY_KEY := os.getenv("TAVILY_KEY")):
     sys_logger.critical("Tavily API key is missing from your .env file!!")
+    raise RuntimeError("API key required!")
 
 if not (COHERE_API_KEY := os.getenv("COHERE_API_KEY")):
     sys_logger.critical("Cohere API key is missing from your .env file!!")
+    raise RuntimeError("API key required!")
 
 # LLM_MODEL = "google/gemini-2.5-flash-lite"
 LLM_MODEL = "openai/gpt-oss-120b:nitro"
@@ -28,7 +31,7 @@ LLM = OpenRouter(
 )
 
 embedder = OpenAIEmbedder(
-    id="nvidia/llama-nemotron-embed-vl-1b-v2:free",
+    id="qwen/qwen3-embedding-8b",
     api_key=LLM_KEY,
     base_url="https://openrouter.ai/api/v1"
 )

@@ -1,5 +1,4 @@
 agno
-ddgs
 openai
 lancedb
 pylance
@@ -7,6 +6,7 @@ tantivy
 pypdf
 python-dotenv
 streamlit
-groq
 tavily-python
 cohere
+fastapi
+uvicorn
