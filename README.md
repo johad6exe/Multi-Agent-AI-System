@@ -32,7 +32,7 @@ flowchart TD
     subgraph RetrieverAgent["📄 Retriever Agent (Agno · OpenRouter)"]
         direction TB
         KB["LanceDB Knowledge Base"]
-        KB --> LDB["Hybrid Search · BM25 + Vector\nCohere Reranker · top_n=3\nNVIDIA Llama Nemotron Embedder"]
+        KB --> LDB["Hybrid Search · BM25 + Vector\nCohere Reranker · top_n=3\nqwen-3-8b-Embedder"]
     end
 
     subgraph GeneralAgent["🌐 General Agent (Agno · OpenRouter)"]
@@ -51,7 +51,7 @@ flowchart TD
 
     Docs --> Reader["PDFReader · Agno\nDocumentChunking\nchunk_size=600 · overlap=100"]
 
-    Reader --> Embedder["NVIDIA Llama Nemotron Embedder\nOpenRouter · text → dense vectors"]
+    Reader --> Embedder["qwen-3-8b-embedder\nOpenRouter · text → dense vectors"]
 
     Embedder --> LanceDB[("LanceDB Vector Store\nstorage/lancedb_store\ntable: research_documents")]
 
