@@ -1,11 +1,19 @@
 # debug_schema.py
 import lancedb
-import pandas as pd
 
 db = lancedb.connect("storage/lancedb_store")
 table = db.open_table("research_documents")
 
+print(table.schema)
+print(60*"-")
+print(table.list_indices())
+print(60*"-")
+print(table.count_rows())
+print(60*"-")
 df = table.to_pandas()
 print(f"Columns: {df.columns.tolist()}")
+print(60*"-")
 print(f"Row count: {len(df)}")
-print(f"\nFirst row payload:\n{df['payload'].iloc[0]}")
+print(60*"-")
+print(f"\nDatabase rows:\n{df['payload'].iloc[0:5]}")
+df['payload'].iloc[0:5].to_csv("sample_payload.csv")

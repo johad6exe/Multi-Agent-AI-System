@@ -22,10 +22,9 @@ if prompt := st.chat_input("Ask about Nvidia, Microsoft, or general question..."
 
     with st.chat_message("assistant"):
         try:
-            # 1. Routing
             with st.spinner("Coordinator is analyzing intent..."):
                 route_response = coordinator.run(prompt)
-                final_response = isinstance(route_response.content,str)
-                st.write_stream(final_response)
+                final_response = route_response.content
+                st.write(final_response)
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")

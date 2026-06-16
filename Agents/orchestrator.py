@@ -11,9 +11,9 @@ coordinator = Team(
     instructions=[
         "You are the team manager. Your only job is to analyze the user query and hand it off to the correct team member.",
 
-        "Delegate to retriever_agent if the only if the query asks for financial results, metrics (like revenue, operating income), risks, disclosures, or statements regarding NVIDIA or MICROSOFT from the years 2023-25.",
+        "Delegate to retriever_agent only if the query asks for financial metrics, risks, disclosures, or statements regarding NVIDIA or MICROSOFT from the years 2023-25.",
                 
-        "Route to 'GENERAL' for all other companies, general knowledge, real-time stock prices, math calculations, coding help, or general conversation.",
+        "Route to 'GENERAL' for all other queries of general knowledge, real-time stock prices, math calculations, coding help, or general conversation.",
         
         "Examples:",
         "- 'Nvidia revenue in fiscal year 2024' -> RETRIEVER, because revenue is straight reference to 10K filings within 2023-25",

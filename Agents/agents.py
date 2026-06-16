@@ -6,7 +6,6 @@ from agno.tools.tavily import TavilyTools
 from agno.tools.calculator import CalculatorTools
 #module imports
 from RAG.knowledge import knowledge_base
-from tracing.logger import sys_logger
 from config import LLM, TAVILY_KEY
     
 # 1. The General Reasoning Agent
@@ -16,22 +15,22 @@ general_agent = Agent(
     tools=[CalculatorTools(), TavilyTools(api_key=TAVILY_KEY,search_depth = "basic")],
     role="You are a brilliant multipurpose reasoning agent. You handle general inquiries, logic, and math calculations.",
     instructions=[
-        "IMPORTANT: Always do include a regular size heading GENERAL AGENT at the beginning of the answer.",
-        "You must use the provided web search tool for any query asking for live, historical, or general knowledge data.",
-        "You must use the provided calculator tool for all math queries involving calculations.",
+        "IMPORTANT: Include a heading GENERAL AGENT at the beginning of the answer.",
+        "You must use the provided web search tool for any query asking for live, historical, or general knowledge.",
+        "You must use the provided calculator tool for all queries requiring math calculations.",
         "For general conversations or facts, use your own knowledge."
     ],
     markdown=True
 )
 
-# 2. Optimized High-Speed Document Retriever Agent
+# 2. Document Retriever Agent
 retriever_agent = Agent(
     name="Retriever_Agent",
     model=LLM,
     knowledge=knowledge_base,
     role="You are a meticulous RAG research assistant. You answer questions strictly using the given knowledge base.",
     instructions=[
-        "IMPORTANT: Always do include a regular size heading RETRIEVER AGENT at the beginning of the answer.",
+        "IMPORTANT: Include a heading RETRIEVER AGENT at the beginning of the answer.",
         "Format the answer in a structured way for better readability.",
         "You are responsible for answering questions based ONLY on the provided knowledge base context.",
         "CRITICAL : If the context does not contain the answer, state explicitly that the information is unavailable.",

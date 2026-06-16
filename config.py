@@ -39,6 +39,6 @@ embedder = OpenAIEmbedder(
 reranker = CohereReranker(
     model="rerank-multilingual-v3.0",
     api_key = COHERE_API_KEY,
-    top_n = 3
+    top_n = 5
 )
 
