@@ -28,16 +28,20 @@ def initialize_knowledge_base(recreate: bool):
         sys_logger.info(f"Loading {files} into LanceDB...")
         pdf_reader = PDFReader(
                         chunking_strategy=DocumentChunking(chunk_size=600, overlap=100)
+                        #Chunk size of 600 to balance capturing context and avoiding token overloads during inference
+                        #Overlap of 100 ensures smooth context transition between chunks
                     )
         knowledge_base.insert(path="data", reader=pdf_reader)
 
-        # database connection for index creation
+        # LanceDB connection and index creation
         db = lancedb.connect("storage/lancedb_store")
         table = db.open_table("research_documents")
 
-        sys_logger.info("Building Vector search index.....")
+        # IVF_HNSW_FLAT: Optimized for high-dimensional vectors and fast search
+        sys_logger.info("Building Vector search index  .....")
         table.create_index(vector_column_name="vector", index_type= 'IVF_HNSW_FLAT', replace = True)
         
+        # Full-Text Search index for efficient keyword-based searches
         sys_logger.info("Building Full-Text Search index.....")
         table.create_fts_index(field_names="payload", replace=True)
         
@@ -47,6 +51,9 @@ def initialize_knowledge_base(recreate: bool):
         
     except Exception as e:
         sys_logger.error(f"Critical failure initializing LanceDB RAG: {e}", exc_info=True)
+        raise RuntimeError("Failed to initialize knowledge base")
+    
+    return True
 
 if __name__ == "__main__":
     # Passing recreate=True ensures we don't duplicate vectors while testing

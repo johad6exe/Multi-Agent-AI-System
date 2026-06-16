@@ -21,7 +21,7 @@ if not (COHERE_API_KEY := os.getenv("COHERE_API_KEY")):
     sys_logger.critical("Cohere API key is missing from your .env file!!")
     raise RuntimeError("API key required!")
 
-# LLM_MODEL = "google/gemini-2.5-flash-lite"
+
 LLM_MODEL = "openai/gpt-oss-120b:nitro"
 EMBG_MODEL = "nvidia/llama-nemotron-embed-vl-1b-v2:free"
 
