@@ -32,7 +32,7 @@ flowchart TD
     subgraph RetrieverAgent["📄 Retriever Agent (Agno · OpenRouter)"]
         direction TB
         KB["LanceDB Knowledge Base"]
-        KB --> LDB["Hybrid Search · BM25 + Vector\nCohere Reranker · top_n=3\nqwen-3-8b-Embedder"]
+        KB --> LDB["Hybrid Search · BM25 + Vector\nCohere Reranker · top_n=5\nqwen-3-8b-Embedder"]
     end
 
     subgraph GeneralAgent["🌐 General Agent (Agno · OpenRouter)"]
@@ -61,7 +61,7 @@ flowchart TD
     FTS --> Hybrid["🔀 Hybrid Search\nSearchType.hybrid"]
     VecIdx --> Hybrid
 
-    Hybrid --> Reranker["Cohere Cross-Encoder Reranker\nrerank-multilingual-v3.0 · top_n=3"]
+    Hybrid --> Reranker["Cohere Cross-Encoder Reranker\nrerank-multilingual-v3.0 · top_n=5"]
 
     Reranker --> Context["✅ Context injected into Retriever Agent prompt\nadd_knowledge_to_context=True"]
 ```
@@ -259,9 +259,9 @@ The project brief mentioned DuckDB as a potential vector store. LanceDB was chos
 
 10-K filings contain highly specific numerical data — exact revenue figures (`$130,497M`), precise fiscal year labels (`FY2025`), regulatory product names (`H100`, `A100`), and legal terminology. Pure semantic search compresses these into fuzzy embedding neighborhoods where exact values can be missed or confused across years. BM25 keyword matching acts as a safety net for these high-precision lookups. `SearchType.hybrid` in LanceDB merges both result sets, capturing queries that are purely semantic ("what are the risk factors") and queries that are purely exact-match ("what was the FY2025 Compute & Networking operating income").
 
-### 3. Cohere cross-encoder reranking (`top_n=3`)
+### 3. Cohere cross-encoder reranking (`top_n=5`)
 
-Initial hybrid retrieval returns the top-10 candidates ranked by a combination of BM25 and cosine scores. These are bi-encoder scores — each chunk is scored independently against the query embedding, which means subtle relevance distinctions are lost. A cross-encoder reranker (Cohere `rerank-multilingual-v3.0`) scores each candidate chunk by attending to the query and the chunk *jointly*, the same way a reader would evaluate relevance. This is substantially more accurate but more expensive, so it is applied only to the final shortlist. Limiting to `top_n=3` keeps the final context window tight, reducing hallucination risk and token cost while delivering the three most precisely relevant chunks.
+Initial hybrid retrieval returns the top-10 candidates ranked by a combination of BM25 and cosine scores. These are bi-encoder scores — each chunk is scored independently against the query embedding, which means subtle relevance distinctions are lost. A cross-encoder reranker (Cohere `rerank-multilingual-v3.0`) scores each candidate chunk by attending to the query and the chunk *jointly*, the same way a reader would evaluate relevance. This is substantially more accurate but more expensive, so it is applied only to the final shortlist. Limiting to `top_n=5` keeps the final context window tight, reducing hallucination risk and token cost while delivering the five most precisely relevant chunks.
 
 ### 4. `add_knowledge_to_context=True` + `search_knowledge=False`
 
@@ -291,7 +291,7 @@ LanceDB does not deduplicate vectors on re-insert. Running `ingest.py` twice on 
 |---|---|---|
 | LanceDB over DuckDB | Purpose-built for hybrid vector + BM25 retrieval; native Agno integration | Less familiar to SQL-first analysts; not a general-purpose query engine |
 | Hybrid BM25 + vector search | Handles both semantic and exact-keyword queries | FTS index must be rebuilt on schema changes; `payload` column name is tightly coupled to Agno's internals |
-| Cohere reranker (`top_n=3`) | High-precision final context window; cross-encoder accuracy | Extra API call adds ~0.5–1s latency; Cohere is a third external dependency |
+| Cohere reranker (`top_n=5`) | High-precision final context window; cross-encoder accuracy | Extra API call adds ~0.5–1s latency; Cohere is a third external dependency |
 | `add_knowledge_to_context` (no autonomous search) | Deterministic, always-on retrieval | Cannot skip retrieval for clearly off-topic queries — coordinator routing accuracy is critical |
 | OpenRouter unified gateway | Single API key; one-line model swaps | Rate limits and uptime depend on OpenRouter's infrastructure; model IDs can change |
 | `TeamMode.route` (single dispatch) | Simple, cheap, fast, clean responses | No fallback if coordinator misroutes; wrong agent handles the query entirely |
@@ -363,7 +363,7 @@ ID   Category           Routing    Relevancy    No Halluc    Score    Latency
 
 - **No incremental ingestion.** Adding a new document requires a full re-ingest with `recreate=True`. A production system would maintain document-level hashes to ingest only changed files.
 - **No routing fallback.** `TeamMode.route` is single-dispatch with no retry. If the coordinator misroutes a query (e.g. routes a real-time query to the Retriever), the wrong agent handles it with no correction mechanism.
-- **`top_n=3` may be too aggressive for complex multi-part questions.** A question spanning multiple fiscal years or multiple topics may need more than 3 chunks to answer fully.
+- **`top_n=5` may be too aggressive for complex multi-part questions.** A question spanning multiple fiscal years or multiple topics may need more than 5 chunks to answer fully.
 - **FTS index is tightly coupled to the `payload` column name.** Agno writes chunks to a column named `payload`; the FTS index must be built on exactly this column name. Any schema change in a future Agno version would require updating `ingest.py`.
 
 ---
